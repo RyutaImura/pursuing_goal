@@ -686,24 +686,22 @@ if __name__ == "__main__":
                     file.write(html_content)
                 time.sleep(2)
                 
-                # 両方のタブを更新
-                handles = display_driver.window_handles
-                display_driver.switch_to.window(handles[0])  # 週間目標のタブ
-                display_driver.get("about:blank")
-                time.sleep(1)
-                display_driver.get(week_path)
+                # 現在のタブの内容を更新（JavaScriptを使用してページをリロード）
+                display_driver.execute_script("location.reload();")
                 time.sleep(2)
 
-                display_driver.switch_to.window(handles[1])  # 月間目標のタブ
-                display_driver.get("about:blank")
-                time.sleep(1)
-                display_driver.get(month_path)
-                time.sleep(2)
-
-                # コンソール出力用の合計値は週間データを使用
-                ak_total = week_a_total + week_k_total
-                remainder = 890 - ak_total
-                print(f"更新完了: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
+                # 現在のタブのURLを取得して、週間表示か月間表示かを判断
+                current_url = display_driver.current_url
+                if "week_result.html" in current_url:
+                    # 週間データを表示
+                    ak_total = week_a_total + week_k_total
+                    remainder = 890 - ak_total
+                    print(f"更新完了 [週間]: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
+                else:
+                    # 月間データを表示
+                    ak_total = month_a_total + month_k_total
+                    remainder = 890 - ak_total
+                    print(f"更新完了 [月間]: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
                 
                 # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）
                 time.sleep(55)
