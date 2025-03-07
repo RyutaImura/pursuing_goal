@@ -235,34 +235,34 @@ def create_html_content(a_total, k_total, is_week=True):
     achievement_img_path = "achievement.png"
 
     if remainder_a <= 0:
-        display_a = f'<span style="white-space: nowrap;">★{abs(remainder_a)}件<img src="{achievement_img_path}" style="width:6vw; height:6vw; vertical-align: middle;"></span>'
+        display_a = f'<span style="white-space: nowrap;">★{abs(remainder_a)}件<img src="{achievement_img_path}" style="width:8vh; height:8vh; vertical-align: middle;"></span>'
     else:
         display_a = f"{remainder_a}件"
         
     if remainder_k <= 0:
-        display_k = f'<span style="white-space: nowrap;">★{abs(remainder_k)}件<img src="{achievement_img_path}" style="width:6vw; height:6vw; vertical-align: middle;"></span>'
+        display_k = f'<span style="white-space: nowrap;">★{abs(remainder_k)}件<img src="{achievement_img_path}" style="width:8vh; height:8vh; vertical-align: middle;"></span>'
     else:
         display_k = f"{remainder_k}件"
 
     # 右下セクションの内容を条件分岐
     if is_week:
         target_section = f"""
-        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 2vh; box-sizing: border-box;">
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3.5vw;">{a_target}件まで: <span class="important" style="font-size: 4vw;">{display_a}</span></div>
+        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
+            <div style="text-align: center; margin: 0.5vh 0;">
+                <div style="font-size: 9vh; white-space: nowrap;">{a_target}件まで: <span class="important" style="font-size: 10vh;">{display_a}</span></div>
             </div>
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3.5vw;">{k_target}件まで: <span class="important" style="font-size: 4vw;">{display_k}</span></div>
+            <div style="text-align: center; margin: 0.5vh 0;">
+                <div style="font-size: 9vh; white-space: nowrap;">{k_target}件まで: <span class="important" style="font-size: 10vh;">{display_k}</span></div>
             </div>
         </div>"""
     else:
         target_section = f"""
-        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 2vh; box-sizing: border-box;">
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3vw;">{a_target}件まで: <span class="important" style="font-size: 4vw;">{display_a}</span></div>
+        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
+            <div style="text-align: center; margin: 0.5vh 0;">
+                <div style="font-size: 9vh; white-space: nowrap;">{a_target}件まで: <span class="important" style="font-size: 10vh;">{display_a}</span></div>
             </div>
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3vw;">{k_target}件まで: <span class="important" style="font-size: 4vw;">{display_k}</span></div>
+            <div style="text-align: center; margin: 0.5vh 0;">
+                <div style="font-size: 9vh; white-space: nowrap;">{k_target}件まで: <span class="important" style="font-size: 10vh;">{display_k}</span></div>
             </div>
         </div>"""
 
@@ -286,18 +286,19 @@ def create_html_content(a_total, k_total, is_week=True):
       box-sizing: border-box;
     }}
     h1 {{
-      font-size: 5vw;
-      margin: 2vh 0;
+      font-size: 12vh;
+      margin: 1vh 0;
       text-shadow: 2px 2px 4px #bdc3c7;
+      white-space: nowrap;
     }}
     .container {{
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr;
-      gap: 2vw;
-      width: 90%;
-      height: 75%;
-      margin-bottom: 2vh;
+      gap: 1vh;
+      width: 98%;
+      height: 80%;
+      margin-bottom: 1vh;
       box-sizing: border-box;
     }}
     .section {{
@@ -305,31 +306,34 @@ def create_html_content(a_total, k_total, is_week=True):
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border: 0.4vw solid #3498db;
-      border-radius: 2vw;
+      border: 0.4vh solid #3498db;
+      border-radius: 2vh;
       background-color: #ffffff;
-      box-shadow: 0 0.5vw 1vw rgba(0,0,0,0.1);
-      padding: 2vh;
+      box-shadow: 0 0.5vh 1vh rgba(0,0,0,0.1);
+      padding: 1vh;
       box-sizing: border-box;
       overflow: hidden;
     }}
     .section p {{
-      font-size: 3.5vw;
-      margin: 1vh 0;
+      font-size: 10vh;
+      margin: 0.5vh 0;
       text-align: center;
-      line-height: 1.3;
+      line-height: 1.2;
+      white-space: nowrap;
     }}
     .important {{
       color: #e74c3c;
       font-weight: bold;
+      font-size: 12vh;
+      white-space: nowrap;
     }}
     .small {{
-      padding: 1vh;
+      padding: 0.5vh;
     }}
     img {{
-      width: 2.5vw;
-      height: 2.5vw;
-      margin-left: 0.5vw;
+      width: 8vh;
+      height: 8vh;
+      margin-left: 0.5vh;
       vertical-align: middle;
     }}
   </style>
@@ -338,13 +342,13 @@ def create_html_content(a_total, k_total, is_week=True):
   <h1>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</h1>
   <div class="container">
     <div class="section">
-      <p>A残込　<span class="important" style="font-size: 4.5vw;">{a_total}</span> 件</p>
+      <p>A残込　<span class="important">{a_total}</span> 件</p>
     </div>
     <div class="section">
-      <p>K残込　<span class="important" style="font-size: 4.5vw;">{k_total}</span> 件</p>
+      <p>K残込　<span class="important">{k_total}</span> 件</p>
     </div>
     <div class="section">
-      <p>AK残込　<span class="important" style="font-size: 4.5vw;">{ak_total}</span> 件</p>
+      <p>AK残込　<span class="important">{ak_total}</span> 件</p>
     </div>
     <div class="section small">
       {target_section}
