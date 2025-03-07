@@ -1,0 +1,49 @@
+[33mcommit 9968184dea9fe9a10d77156dfce3dd769ce768ce[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Ryuta Imura <r.i.engineer0119@gmail.comgit config --global user.name Ryuta>
+Date:   Fri Mar 7 16:11:21 2025 +0900
+
+    コンソール出力を改善：現在表示中のタブ（週間/月間）に応じたデータを表示するように変更
+
+[1mdiff --git a/main.py b/main.py[m
+[1mindex d9be69d..19f66e4 100644[m
+[1m--- a/main.py[m
+[1m+++ b/main.py[m
+[36m@@ -686,24 +686,22 @@[m [mif __name__ == "__main__":[m
+                     file.write(html_content)[m
+                 time.sleep(2)[m
+                 [m
+[31m-                # 両方のタブを更新[m
+[31m-                handles = display_driver.window_handles[m
+[31m-                display_driver.switch_to.window(handles[0])  # 週間目標のタブ[m
+[31m-                display_driver.get("about:blank")[m
+[31m-                time.sleep(1)[m
+[31m-                display_driver.get(week_path)[m
+[31m-                time.sleep(2)[m
+[31m-[m
+[31m-                display_driver.switch_to.window(handles[1])  # 月間目標のタブ[m
+[31m-                display_driver.get("about:blank")[m
+[31m-                time.sleep(1)[m
+[31m-                display_driver.get(month_path)[m
+[32m+[m[32m                # 現在のタブの内容を更新（JavaScriptを使用してページをリロード）[m
+[32m+[m[32m                display_driver.execute_script("location.reload();")[m
+                 time.sleep(2)[m
+ [m
+[31m-                # コンソール出力用の合計値は週間データを使用[m
+[31m-                ak_total = week_a_total + week_k_total[m
+[31m-                remainder = 890 - ak_total[m
+[31m-                print(f"更新完了: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")[m
+[32m+[m[32m                # 現在のタブのURLを取得して、週間表示か月間表示かを判断[m
+[32m+[m[32m                current_url = display_driver.current_url[m
+[32m+[m[32m                if "week_result.html" in current_url:[m
+[32m+[m[32m                    # 週間データを表示[m
+[32m+[m[32m                    ak_total = week_a_total + week_k_total[m
+[32m+[m[32m                    remainder = 890 - ak_total[m
+[32m+[m[32m                    print(f"更新完了 [週間]: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")[m
+[32m+[m[32m                else:[m
+[32m+[m[32m                    # 月間データを表示[m
+[32m+[m[32m                    ak_total = month_a_total + month_k_total[m
+[32m+[m[32m                    remainder = 890 - ak_total[m
+[32m+[m[32m                    print(f"更新完了 [月間]: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")[m
+                 [m
+                 # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）[m
+                 time.sleep(55)[m
