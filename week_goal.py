@@ -37,7 +37,7 @@ def calculate_week_number():
     return week_number
 
 
-def recalc_total():
+def recalc_total_week():
     """
     apolloサイトの指定された週の [実] を合計して返します。
     """
@@ -64,7 +64,35 @@ def recalc_total():
                 if match:
                     total += int(match.group(1))
                     break
-                    
+    except Exception as e:
+        print(f"データ取得エラー (apollo): {e}")
+    return total
+
+def recalc_total_month():
+    """
+    apolloサイトの22クリニックの [実] を合計して返します。（A残込）
+    """
+    total = 0
+    target_clinics = [
+        "札幌院", "仙台院", "宇都宮", "高崎院", "大宮院", "柏院", "船橋院",
+        "新宿院", "新橋院", "神田院", "立川院", "横浜院", "静岡院", "名古屋院", "梅田院",
+        "心斎橋", "なんば院", "神戸院", "高松", "広島院", "博多", "天神"
+    ]
+    try:
+        WebDriverWait(extraction_driver, 10).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "clinic")))
+        clinic_cells = extraction_driver.find_elements(By.CLASS_NAME, "clinic")
+        for cell in clinic_cells:
+            try:
+                clinic_name = cell.find_element(By.TAG_NAME, "a").text.strip()
+            except NoSuchElementException:
+                continue
+            if clinic_name in target_clinics:
+                spans = cell.find_elements(By.TAG_NAME, "span")
+                for span in spans:
+                    match = re.search(r"\[実\](\d+)", span.text)
+                    if match:
+                        total += int(match.group(1))
+                        break
     except Exception as e:
         print(f"データ取得エラー (apollo): {e}")
     return total
@@ -155,6 +183,7 @@ def create_html_content(a_total, k_total, is_week=True):
     remainder_a = a_target - a_total
     remainder_k = k_target - k_total
     week_number = calculate_week_number()
+    current_month = datetime.now().month  # 現在の月を取得
 
     # 画像の相対パスを使用
     achievement_img_path = "achievement.png"
@@ -194,7 +223,7 @@ def create_html_content(a_total, k_total, is_week=True):
     return f"""<html>
 <head>
   <meta charset="UTF-8">
-  <title>{week_number}w目標！</title>
+  <title>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</title>
   <style>
     html, body {{
       margin: 0;
@@ -260,7 +289,7 @@ def create_html_content(a_total, k_total, is_week=True):
   </style>
 </head>
 <body>
-  <h1>{week_number}w目標！</h1>
+  <h1>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</h1>
   <div class="container">
     <div class="section">
       <p>A残込　<span class="important" style="font-size: 4.5vw;">{a_total}</span> 件</p>
@@ -394,6 +423,14 @@ def get_week_url():
     monday, _ = get_current_week_range()
     return f"https://apollo-scedure77.net/CAL/week.php?w={monday.strftime('%Y-%m-%d')}"
 
+def get_month_url():
+    """
+    現在の月の1日のApolloカレンダーURLを生成します。
+    """
+    current_date = datetime.now()
+    first_day = current_date.replace(day=1)
+    return f"https://apollo-scedure77.net/CAL/week.php?w={first_day.strftime('%Y-%m-%d')}"
+
 def get_chrome_driver_path():
     """
     実行環境に応じて適切なChromeDriverのパスを取得します。
@@ -477,11 +514,18 @@ if __name__ == "__main__":
 
         # 初期データの取得
         try:
-            # apolloサイトからデータ取得
+            # 週間データ取得用URL
             target_url = get_week_url()
             extraction_driver.get(target_url)
             time.sleep(3)
-            a_total = recalc_total()
+            week_a_total = recalc_total_week()
+            time.sleep(2)
+
+            # 月間データ取得用URL
+            month_url = get_month_url()
+            extraction_driver.get(month_url)
+            time.sleep(3)
+            month_a_total = recalc_total_month()
             time.sleep(2)
 
             # tomatoサイトからデータ取得
@@ -497,10 +541,10 @@ if __name__ == "__main__":
 
             # 両方のHTMLファイルを作成（週間用と月間用で異なる形式）
             with open(week_filename, "w", encoding="utf-8") as file:
-                html_content = create_html_content(a_total, k_total, is_week=True)
+                html_content = create_html_content(week_a_total, k_total, is_week=True)
                 file.write(html_content)
             with open(month_filename, "w", encoding="utf-8") as file:
-                html_content = create_html_content(a_total, k_total, is_week=False)
+                html_content = create_html_content(month_a_total, k_total, is_week=False)
                 file.write(html_content)
             
             logging.info("初期データ取得・HTML作成完了")
@@ -531,16 +575,27 @@ if __name__ == "__main__":
         # ⑤ 定期更新ループ（1分毎）
         while True:
             try:
-                # 現在の週のURLを再取得（週が変わった場合に対応）
+                # 週間データ取得用URL
                 target_url = get_week_url()
                 extraction_driver.get(target_url)
-                time.sleep(3)  # ページ読み込み待機を3秒に延長
+                time.sleep(3)
                 extraction_driver.refresh()
-                time.sleep(3)  # リフレッシュ後の待機も3秒に延長
+                time.sleep(3)
                 
-                # apolloサイトからデータ取得
-                a_total = recalc_total()
-                time.sleep(2)  # データ取得後の待機
+                # 週間表示用のデータ取得
+                week_a_total = recalc_total_week()
+                time.sleep(2)
+
+                # 月間データ取得用URL
+                month_url = get_month_url()
+                extraction_driver.get(month_url)
+                time.sleep(3)
+                extraction_driver.refresh()
+                time.sleep(3)
+                
+                # 月間表示用のデータ取得
+                month_a_total = recalc_total_month()
+                time.sleep(2)
 
                 # 現在の年月を更新
                 current_date = datetime.now()
@@ -551,24 +606,24 @@ if __name__ == "__main__":
                 url_ueno = f"https://tomato-systemprograms1455.com/CAL/monthly.php?c=13&y={target_year}&m={target_month:02d}#cal"
                 url_kyoto = f"https://tomato-systemprograms1455.com/CAL/monthly.php?c=10&y={target_year}&m={target_month:02d}#cal"
 
-                # tomatoサイト：上野・京都のネット値取得し、K残込とする
+                # tomatoサイト：上野・京都のネット値取得
                 _, _, UenoNet = get_oguchi_value(tomato_driver, url_ueno)
-                time.sleep(2)  # 上野データ取得後の待機
+                time.sleep(2)
                 _, _, KyotoNet = get_oguchi_value(tomato_driver, url_kyoto)
-                time.sleep(2)  # 京都データ取得後の待機
+                time.sleep(2)
                 k_total = UenoNet + KyotoNet
 
                 # HTML更新前の待機
                 time.sleep(1)
                 
-                # 両方のHTMLファイルを更新（週間用と月間用で異なる形式）
+                # HTMLファイルを更新（週間と月間で異なるA残込を使用）
                 with open(week_filename, "w", encoding="utf-8") as file:
-                    html_content = create_html_content(a_total, k_total, is_week=True)
+                    html_content = create_html_content(week_a_total, k_total, is_week=True)
                     file.write(html_content)
                 with open(month_filename, "w", encoding="utf-8") as file:
-                    html_content = create_html_content(a_total, k_total, is_week=False)
+                    html_content = create_html_content(month_a_total, k_total, is_week=False)
                     file.write(html_content)
-                time.sleep(2)  # HTML更新後の待機を2秒に延長
+                time.sleep(2)
                 
                 # 両方のタブを更新
                 handles = display_driver.window_handles
@@ -584,9 +639,9 @@ if __name__ == "__main__":
                 display_driver.get(month_path)
                 time.sleep(2)
 
-                ak_total = a_total + k_total
+                ak_total = week_a_total + k_total
                 remainder = 890 - ak_total
-                print(f"更新完了: A残込 = {a_total}, K残込 = {k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
+                print(f"更新完了: A残込 = {week_a_total}, K残込 = {k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
                 
                 # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）
                 time.sleep(55)
