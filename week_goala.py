@@ -37,7 +37,7 @@ def calculate_week_number():
     return week_number
 
 
-def recalc_total_week():
+def recalc_total():
     """
     apolloサイトの指定された週の [実] を合計して返します。
     """
@@ -64,35 +64,7 @@ def recalc_total_week():
                 if match:
                     total += int(match.group(1))
                     break
-    except Exception as e:
-        print(f"データ取得エラー (apollo): {e}")
-    return total
-
-def recalc_total_month():
-    """
-    apolloサイトの22クリニックの [実] を合計して返します。（A残込）
-    """
-    total = 0
-    target_clinics = [
-        "札幌院", "仙台院", "宇都宮", "高崎院", "大宮院", "柏院", "船橋院",
-        "新宿院", "新橋院", "神田院", "立川院", "横浜院", "静岡院", "名古屋院", "梅田院",
-        "心斎橋", "なんば院", "神戸院", "高松", "広島院", "博多", "天神"
-    ]
-    try:
-        WebDriverWait(extraction_driver, 10).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "clinic")))
-        clinic_cells = extraction_driver.find_elements(By.CLASS_NAME, "clinic")
-        for cell in clinic_cells:
-            try:
-                clinic_name = cell.find_element(By.TAG_NAME, "a").text.strip()
-            except NoSuchElementException:
-                continue
-            if clinic_name in target_clinics:
-                spans = cell.find_elements(By.TAG_NAME, "span")
-                for span in spans:
-                    match = re.search(r"\[実\](\d+)", span.text)
-                    if match:
-                        total += int(match.group(1))
-                        break
+                    
     except Exception as e:
         print(f"データ取得エラー (apollo): {e}")
     return total
@@ -171,10 +143,16 @@ def read_target_values():
         # デフォルト値を返す
         return 216, 22
 
-def create_html_content(a_total, k_total, is_week=True):
+def update_html(a_total, k_total):
     """
-    HTMLコンテンツを生成します。
-    is_week: Trueの場合はweek_result.html用、Falseの場合はmonth_result.html用
+    取得した数値をHTMLに埋め込み、ローカルファイルとして保存します。
+    表示項目は
+      左上：A残込
+      右上：K残込
+      左下：AK残込 (A残込 + K残込)
+      右下：目標値までの残件数（target_values.txtから読み取り）
+    なお、目標を超えた場合はマイナス表記ではなく「★」表記に変更し、
+    残件数が0以下の場合は、テキストの横に achievement.png の画像を表示します。
     """
     # 目標値を読み取り
     a_target, k_target = read_target_values()
@@ -183,7 +161,6 @@ def create_html_content(a_total, k_total, is_week=True):
     remainder_a = a_target - a_total
     remainder_k = k_target - k_total
     week_number = calculate_week_number()
-    current_month = datetime.now().month  # 現在の月を取得
 
     # 画像の相対パスを使用
     achievement_img_path = "achievement.png"
@@ -198,60 +175,35 @@ def create_html_content(a_total, k_total, is_week=True):
     else:
         display_k = f"{remainder_k}件"
 
-    # 右下セクションの内容を条件分岐
-    if is_week:
-        target_section = f"""
-        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 2vh; box-sizing: border-box;">
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3.5vw;">{a_target}件まで: <span class="important" style="font-size: 4vw;">{display_a}</span></div>
-            </div>
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3.5vw;">{k_target}件まで: <span class="important" style="font-size: 4vw;">{display_k}</span></div>
-            </div>
-        </div>"""
-    else:
-        target_section = f"""
-        <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 2vh; box-sizing: border-box;">
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3vw;">{a_target}件まで: <span class="important" style="font-size: 4vw;">{display_a}</span></div>
-            </div>
-            <div style="text-align: center; margin: 1vh 0;">
-                <div style="font-size: 3vw;">{k_target}件まで: <span class="important" style="font-size: 4vw;">{display_k}</span></div>
-            </div>
-        </div>"""
-
-    return f"""<html>
+    html_content = f"""<html>
 <head>
   <meta charset="UTF-8">
-  <title>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</title>
+  <title>{week_number}w目標！</title>
   <style>
     html, body {{
       margin: 0;
       padding: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       font-family: 'Arial', sans-serif;
       background: linear-gradient(to bottom right, #f8f9fa, #e9ecef);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      overflow: hidden;
-      box-sizing: border-box;
     }}
     h1 {{
-      font-size: 5vw;
+      font-size: 7vw;
       margin: 2vh 0;
-      text-shadow: 2px 2px 4px #bdc3c7;
+      text-shadow: 3px 3px 5px #bdc3c7;
     }}
     .container {{
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr;
-      gap: 2vw;
+      gap: 3vw;
       width: 90%;
-      height: 75%;
-      margin-bottom: 2vh;
+      height: 70%;
       box-sizing: border-box;
     }}
     .section {{
@@ -259,53 +211,69 @@ def create_html_content(a_total, k_total, is_week=True):
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      border: 0.4vw solid #3498db;
+      border: 0.5vw solid #3498db;
       border-radius: 2vw;
       background-color: #ffffff;
-      box-shadow: 0 0.5vw 1vw rgba(0,0,0,0.1);
-      padding: 2vh;
-      box-sizing: border-box;
-      overflow: hidden;
+      box-shadow: 0px 1vw 2vw rgba(0,0,0,0.1);
     }}
-    .section p {{
-      font-size: 3.5vw;
-      margin: 1vh 0;
-      text-align: center;
-      line-height: 1.3;
+    p {{
+      font-size: 5vw;
+      margin: 0.5vh 0;
     }}
     .important {{
+      font-size: 7vw;
       color: #e74c3c;
       font-weight: bold;
     }}
+    /* 右下ボックス用の小さい文字サイズ */
     .small {{
-      padding: 1vh;
+      white-space: nowrap;
     }}
-    img {{
-      width: 2.5vw;
-      height: 2.5vw;
-      margin-left: 0.5vw;
-      vertical-align: middle;
+    .small p {{
+      font-size: 4vw;
+      margin: 0.5vh 0;
+      white-space: nowrap;
+    }}
+    .small .important {{
+      font-size: 6vw;
+      display: inline-block;
+      white-space: nowrap;
+    }}
+    /* 追加：右下セクションの特別なスタイル */
+    .section.small {{
+      padding: 1vw;
+      overflow: visible;
+      white-space: nowrap;
     }}
   </style>
 </head>
 <body>
-  <h1>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</h1>
+  <h1>{week_number}w目標！</h1>
   <div class="container">
+    <!-- 左上：A残込 -->
     <div class="section">
-      <p>A残込　<span class="important" style="font-size: 4.5vw;">{a_total}</span> 件</p>
+      <p>A残込　<span class="important">{a_total}</span> 件</p>
     </div>
+    <!-- 右上：K残込 -->
     <div class="section">
-      <p>K残込　<span class="important" style="font-size: 4.5vw;">{k_total}</span> 件</p>
+      <p>K残込　<span class="important">{k_total}</span> 件</p>
     </div>
+    <!-- 左下：AK残込 -->
     <div class="section">
-      <p>AK残込　<span class="important" style="font-size: 4.5vw;">{ak_total}</span> 件</p>
+      <p>AK残込　<span class="important">{ak_total}</span> 件</p>
     </div>
+    <!-- 右下：目標までの残件数 -->
     <div class="section small">
-      {target_section}
+      <div style="white-space: nowrap;">
+        <p>{a_target}件まで: <span class="important">{display_a}</span></p>
+        <p>{k_target}件まで: <span class="important">{display_k}</span></p>
+      </div>
     </div>
   </div>
 </body>
 </html>"""
+    with open(html_filename, "w", encoding="utf-8") as file:
+        file.write(html_content)
 
 def auto_login_apollo(driver):
     """
@@ -367,40 +335,22 @@ def auto_login_tomato(driver):
         print("Tomatoログインでエラーが発生しました。")
         return False
 
-def create_headless_options():
-    """
-    ヘッドレスモード用のChromeオプションを作成
-    """
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument('--remote-debugging-port=9222')
-    options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-notifications")
-    options.add_argument("--disable-infobars")
-    
-    # Chrome User Dataディレクトリの設定
-    user_data_dir = os.path.join(os.getcwd(), "chrome_user_data")
-    options.add_argument(f"--user-data-dir={user_data_dir}")
-    return options
-
 def create_display_options():
     """
     表示用のChromeオプションを作成（非ヘッドレスモード）
     """
     options = webdriver.ChromeOptions()
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-notifications")
-    options.add_argument("--disable-infobars")
-    options.add_argument("--start-maximized")  # ウィンドウを最大化
-    
-    # Chrome User Dataディレクトリの設定
-    user_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chrome_user_data_display")
-    options.add_argument(f"--user-data-dir={user_data_dir}")
+    return options
+
+def create_headless_options(user_data_suffix=''):
+    """
+    ヘッドレスモード用のChromeオプションを作成
+    """
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
     return options
 
 def get_current_week_range():
@@ -422,14 +372,6 @@ def get_week_url():
     """
     monday, _ = get_current_week_range()
     return f"https://apollo-scedure77.net/CAL/week.php?w={monday.strftime('%Y-%m-%d')}"
-
-def get_month_url():
-    """
-    現在の月の1日のApolloカレンダーURLを生成します。
-    """
-    current_date = datetime.now()
-    first_day = current_date.replace(day=1)
-    return f"https://apollo-scedure77.net/CAL/week.php?w={first_day.strftime('%Y-%m-%d')}"
 
 def get_chrome_driver_path():
     """
@@ -458,6 +400,164 @@ def get_chrome_driver_path():
         logging.error(f"ChromeDriverの設定中にエラーが発生: {str(e)}")
         raise
 
+def get_current_month_goal():
+    """
+    現在の月の目標値をテキストファイルから読み取ります。
+    ファイルが存在しない場合はデフォルト値を使用します。
+    """
+    try:
+        with open("month_target_values.txt", "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            a_target = int(lines[0].strip())
+            k_target = int(lines[1].strip())
+            return a_target, k_target
+    except Exception as e:
+        print(f"月間目標値ファイルの読み込みエラー: {e}")
+        # デフォルト値を返す（2月の場合）
+        return 890, 900
+
+def update_month_goal_html(a_total, k_total):
+    """
+    月間目標用のHTMLを生成します。
+    """
+    current_date = datetime.now()
+    current_month = current_date.month
+    
+    # 月間目標値を読み取り
+    a_target, k_target = get_current_month_goal()
+    
+    ak_total = a_total + k_total
+    remainder_a = a_target - a_total
+    remainder_k = k_target - k_total
+
+    # 画像の相対パスを使用
+    achievement_img_path = "achievement.png"
+
+    if remainder_a <= 0:
+        display_a = f'<span style="white-space: nowrap;">★{abs(remainder_a)}件<img src="{achievement_img_path}" style="width:6vw; height:6vw; vertical-align: middle;"></span>'
+    else:
+        display_a = f"{remainder_a}件"
+        
+    if remainder_k <= 0:
+        display_k = f'<span style="white-space: nowrap;">★{abs(remainder_k)}件<img src="{achievement_img_path}" style="width:6vw; height:6vw; vertical-align: middle;"></span>'
+    else:
+        display_k = f"{remainder_k}件"
+
+    html_content = f"""<html>
+<head>
+  <meta charset="UTF-8">
+  <title>{current_month}月目標！</title>
+  <style>
+    html, body {{
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(to bottom right, #f8f9fa, #e9ecef);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }}
+    h1 {{
+      font-size: 7vw;
+      margin: 2vh 0;
+      text-shadow: 3px 3px 5px #bdc3c7;
+    }}
+    .container {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 3vw;
+      width: 90%;
+      height: 70%;
+      box-sizing: border-box;
+    }}
+    .section {{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 0.5vw solid #3498db;
+      border-radius: 2vw;
+      background-color: #ffffff;
+      box-shadow: 0px 1vw 2vw rgba(0,0,0,0.1);
+    }}
+    p {{
+      font-size: 5vw;
+      margin: 0.5vh 0;
+    }}
+    .important {{
+      font-size: 7vw;
+      color: #e74c3c;
+      font-weight: bold;
+    }}
+    .small {{
+      white-space: nowrap;
+    }}
+    .small p {{
+      font-size: 4vw;
+      margin: 0.5vh 0;
+      white-space: nowrap;
+    }}
+    .small .important {{
+      font-size: 6vw;
+      display: inline-block;
+      white-space: nowrap;
+    }}
+    .section.small {{
+      padding: 1vw;
+      overflow: visible;
+      white-space: nowrap;
+    }}
+  </style>
+</head>
+<body>
+  <h1>{current_month}月目標！</h1>
+  <div class="container">
+    <!-- 左上：A残込 -->
+    <div class="section">
+      <p>A残込　<span class="important">{a_total}</span> 件</p>
+    </div>
+    <!-- 右上：K残込 -->
+    <div class="section">
+      <p>K残込　<span class="important">{k_total}</span> 件</p>
+    </div>
+    <!-- 左下：AK残込 -->
+    <div class="section">
+      <p>AK残込　<span class="important">{ak_total}</span> 件</p>
+    </div>
+    <!-- 右下：目標までの残件数 -->
+    <div class="section small">
+      <div style="white-space: nowrap;">
+        <p>{a_target}件まで: <span class="important">{display_a}</span></p>
+        <p>{k_target}件まで: <span class="important">{display_k}</span></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+    month_html_filename = "month_goal.html"
+    with open(month_html_filename, "w", encoding="utf-8") as file:
+        file.write(html_content)
+    return month_html_filename
+
+def cleanup_chrome_processes():
+    """
+    実行中のChromeプロセスをクリーンアップします。
+    """
+    try:
+        if os.name == 'nt':  # Windows
+            os.system('taskkill /f /im chrome.exe >nul 2>&1')
+            os.system('taskkill /f /im chromedriver.exe >nul 2>&1')
+        else:  # Linux/Mac
+            os.system('pkill -f chrome')
+            os.system('pkill -f chromedriver')
+        time.sleep(2)  # プロセスが完全に終了するのを待つ
+    except Exception as e:
+        logging.error(f"Chromeプロセスのクリーンアップ中にエラーが発生: {str(e)}")
+
 # -------------------------------
 # メイン処理開始
 # -------------------------------
@@ -470,12 +570,30 @@ if __name__ == "__main__":
         chromedriver_path = get_chrome_driver_path()
         logging.info(f"ChromeDriverパス: {chromedriver_path}")
         
+        # 既存のChromeプロセスをクリーンアップ
+        cleanup_chrome_processes()
+        time.sleep(2)
+        
+        # 各種ディレクトリの作成とクリーンアップ
+        for dir_name in ["chrome_user_data_apollo", "chrome_user_data_tomato", "chrome_user_data_display"]:
+            dir_path = os.path.join(os.getcwd(), dir_name)
+            if os.path.exists(dir_path):
+                try:
+                    shutil.rmtree(dir_path)
+                    time.sleep(1)
+                except Exception as e:
+                    logging.warning(f"ディレクトリの削除に失敗: {dir_path}, エラー: {str(e)}")
+            os.makedirs(dir_path)
+            logging.info(f"ディレクトリを作成: {dir_path}")
+        
+        time.sleep(2)  # ディレクトリ操作後の待機
+        
         # apolloサイト用ドライバの起動＆ログイン
-        headless_options = create_headless_options()
+        headless_options_apollo = create_headless_options()
         
         logging.info("ChromeDriverサービス作成開始")
         extraction_service = ChromeService(chromedriver_path)
-        extraction_driver = webdriver.Chrome(service=extraction_service, options=headless_options)
+        extraction_driver = webdriver.Chrome(service=extraction_service, options=headless_options_apollo)
         logging.info("ChromeDriver初期化完了")
 
         if not auto_login_apollo(extraction_driver):
@@ -490,8 +608,9 @@ if __name__ == "__main__":
         logging.info(f"Apollo URL取得成功: {target_url}")
 
         # tomatoサイト用ドライバの起動＆ログイン
+        headless_options_tomato = create_headless_options()
         tomato_service = Service(chromedriver_path)
-        tomato_driver = webdriver.Chrome(service=tomato_service, options=headless_options)
+        tomato_driver = webdriver.Chrome(service=tomato_service, options=headless_options_tomato)
         logging.info("Tomato ChromeDriver初期化完了")
 
         if not auto_login_tomato(tomato_driver):
@@ -501,100 +620,37 @@ if __name__ == "__main__":
             exit(1)
         logging.info("Tomatoログイン成功")
 
-        # ④ HTML表示用ドライバの設定（非ヘッドレスモード）
-        week_filename = "week_result.html"
-        month_filename = "month_result.html"
-        week_path = "file:///" + os.path.abspath(week_filename)
-        month_path = "file:///" + os.path.abspath(month_filename)
-
+        # HTML表示用ドライバの設定（非ヘッドレスモード）
+        html_filename = "clinic_result.html"
+        abs_html_path = "file:///" + os.path.abspath(html_filename)
         display_service = Service(chromedriver_path)
         display_options = create_display_options()
         display_driver = webdriver.Chrome(service=display_service, options=display_options)
+        
+        month_display_service = Service(chromedriver_path)
+        month_display_options = create_display_options()
+        month_display_driver = webdriver.Chrome(service=month_display_service, options=month_display_options)
+        
         logging.info("表示用ChromeDriver初期化完了")
 
-        # 初期データの取得
-        try:
-            # 週間データ取得用URL
-            target_url = get_week_url()
-            extraction_driver.get(target_url)
-            time.sleep(3)
-            week_a_total = recalc_total_week()
-            time.sleep(2)
-
-            # 月間データ取得用URL
-            month_url = get_month_url()
-            extraction_driver.get(month_url)
-            time.sleep(3)
-            month_a_total = recalc_total_month()
-            time.sleep(2)
-
-            # tomatoサイトからデータ取得
-            current_date = datetime.now()
-            url_ueno = f"https://tomato-systemprograms1455.com/CAL/monthly.php?c=13&y={current_date.year}&m={current_date.month:02d}#cal"
-            url_kyoto = f"https://tomato-systemprograms1455.com/CAL/monthly.php?c=10&y={current_date.year}&m={current_date.month:02d}#cal"
-            
-            _, _, UenoNet = get_oguchi_value(tomato_driver, url_ueno)
-            time.sleep(2)
-            _, _, KyotoNet = get_oguchi_value(tomato_driver, url_kyoto)
-            time.sleep(2)
-            k_total = UenoNet + KyotoNet
-
-            # 両方のHTMLファイルを作成（週間用と月間用で異なる形式）
-            with open(week_filename, "w", encoding="utf-8") as file:
-                html_content = create_html_content(week_a_total, k_total, is_week=True)
-                file.write(html_content)
-            with open(month_filename, "w", encoding="utf-8") as file:
-                html_content = create_html_content(month_a_total, k_total, is_week=False)
-                file.write(html_content)
-            
-            logging.info("初期データ取得・HTML作成完了")
-        except Exception as e:
-            logging.error(f"初期データ取得でエラー発生: {str(e)}")
-            # エラー時は初期表示用HTMLを作成
-            initial_html = "<html><body><h1>データ取得中にエラーが発生しました...</h1></body></html>"
-            for filename in [week_filename, month_filename]:
-                with open(filename, "w", encoding="utf-8") as file:
-                    file.write(initial_html)
-
-        # 最初のタブで週間目標を表示
-        display_driver.get(week_path)
-        time.sleep(2)
-
-        # 新しいタブを開く
-        display_driver.execute_script("window.open('', '_blank');")
-        time.sleep(2)
-
-        # 新しいタブに切り替えて月間目標を表示
-        display_driver.switch_to.window(display_driver.window_handles[-1])
-        display_driver.get(month_path)
-        time.sleep(2)
-
+        initial_html = "<html><body><p>初期表示中...</p></body></html>"
+        with open(html_filename, "w", encoding="utf-8") as file:
+            file.write(initial_html)
+        display_driver.get(abs_html_path)
         logging.info("初期HTML表示完了")
-        logging.info(f"タブの数: {len(display_driver.window_handles)}")
 
-        # ⑤ 定期更新ループ（1分毎）
+        # 定期更新ループ（1分毎）
         while True:
             try:
-                # 週間データ取得用URL
+                # 現在の週のURLを再取得（週が変わった場合に対応）
                 target_url = get_week_url()
                 extraction_driver.get(target_url)
-                time.sleep(3)
-                extraction_driver.refresh()
-                time.sleep(3)
-                
-                # 週間表示用のデータ取得
-                week_a_total = recalc_total_week()
                 time.sleep(2)
-
-                # 月間データ取得用URL
-                month_url = get_month_url()
-                extraction_driver.get(month_url)
-                time.sleep(3)
                 extraction_driver.refresh()
-                time.sleep(3)
+                time.sleep(2)
                 
-                # 月間表示用のデータ取得
-                month_a_total = recalc_total_month()
+                # apolloサイトからデータ取得
+                a_total = recalc_total()
                 time.sleep(2)
 
                 # 現在の年月を更新
@@ -613,41 +669,26 @@ if __name__ == "__main__":
                 time.sleep(2)
                 k_total = UenoNet + KyotoNet
 
-                # HTML更新前の待機
+                # 週間目標のHTML更新
+                update_html(a_total, k_total)
                 time.sleep(1)
                 
-                # HTMLファイルを更新（週間と月間で異なるA残込を使用）
-                with open(week_filename, "w", encoding="utf-8") as file:
-                    html_content = create_html_content(week_a_total, k_total, is_week=True)
-                    file.write(html_content)
-                with open(month_filename, "w", encoding="utf-8") as file:
-                    html_content = create_html_content(month_a_total, k_total, is_week=False)
-                    file.write(html_content)
-                time.sleep(2)
+                # 月間目標のHTML更新
+                month_html_filename = update_month_goal_html(a_total, k_total)
+                month_abs_html_path = "file:///" + os.path.abspath(month_html_filename)
                 
-                # 両方のタブを更新
-                handles = display_driver.window_handles
-                display_driver.switch_to.window(handles[0])  # 週間目標のタブ
-                display_driver.get("about:blank")
+                # 両方の表示を更新
+                display_driver.get(abs_html_path)
+                month_display_driver.get(month_abs_html_path)
                 time.sleep(1)
-                display_driver.get(week_path)
-                time.sleep(2)
 
-                display_driver.switch_to.window(handles[1])  # 月間目標のタブ
-                display_driver.get("about:blank")
-                time.sleep(1)
-                display_driver.get(month_path)
-                time.sleep(2)
-
-                ak_total = week_a_total + k_total
-                remainder = 890 - ak_total
-                print(f"更新完了: A残込 = {week_a_total}, K残込 = {k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
+                ak_total = a_total + k_total
+                print(f"更新完了: A残込 = {a_total}, K残込 = {k_total}, AK残込 = {ak_total}（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
                 
-                # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）
                 time.sleep(55)
             except Exception as e:
                 logging.error(f"メインループでエラー発生: {str(e)}")
-                time.sleep(60)  # エラー時も1分待機してから再試行
+                time.sleep(60)
     except Exception as e:
         logging.error(f"重大なエラーが発生: {str(e)}")
         messagebox.showerror("エラー", f"アプリケーションの起動に失敗しました。\nエラー内容: {str(e)}\n\nログファイル {log_file} を確認してください。")

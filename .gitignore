@@ -1,0 +1,14 @@
+# Chrome user data directories
+chrome_user_data/
+chrome_user_data_*/
+
+# Generated files
+*.spec
+clinic_result.html
+weekgoal_error.log
+__pycache__/
+*.pyc
+
+# Temporary files
+*.log
+*.tmp 
