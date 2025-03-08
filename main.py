@@ -228,9 +228,12 @@ def create_html_content(a_total, k_total, is_week=True):
     ak_total = a_total + k_total
     remainder_a = a_target - a_total
     remainder_k = k_target - k_total
+    
+    # 現在の週番号または月を取得
+    current_date = datetime.now()
+    current_month = current_date.month
     week_number = calculate_week_number()
-    current_month = datetime.now().month  # 現在の月を取得
-
+    
     # 画像の相対パスを使用
     achievement_img_path = "achievement.png"
 
@@ -243,7 +246,7 @@ def create_html_content(a_total, k_total, is_week=True):
         display_k = f'<span style="white-space: nowrap;">★{abs(remainder_k)}件<img src="{achievement_img_path}" style="width:8vh; height:8vh; vertical-align: middle;"></span>'
     else:
         display_k = f"{remainder_k}件"
-
+    
     # 右下セクションの内容を条件分岐
     if is_week:
         target_section = f"""
@@ -266,9 +269,16 @@ def create_html_content(a_total, k_total, is_week=True):
             </div>
         </div>"""
 
+    # タイムスタンプを追加（キャッシュ回避用）
+    timestamp = int(time.time())
+    
     return f"""<html>
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="60">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</title>
   <style>
     html, body {{
@@ -336,6 +346,9 @@ def create_html_content(a_total, k_total, is_week=True):
       margin-left: 0.5vh;
       vertical-align: middle;
     }}
+    .timestamp {{
+      display: none;
+    }}
   </style>
 </head>
 <body>
@@ -354,6 +367,7 @@ def create_html_content(a_total, k_total, is_week=True):
       {target_section}
     </div>
   </div>
+  <div class="timestamp">{timestamp}</div>
 </body>
 </html>"""
 
@@ -439,18 +453,37 @@ def create_headless_options():
 
 def create_display_options():
     """
-    表示用のChromeオプションを作成（非ヘッドレスモード）
+    表示用ブラウザのオプションを設定
     """
     options = webdriver.ChromeOptions()
+    options.add_argument("--start-maximized")  # 最大化して起動
+    options.add_argument("--disable-infobars")  # 情報バーを非表示
+    options.add_argument("--disable-extensions")  # 拡張機能を無効化
+    options.add_argument("--disable-popup-blocking")  # ポップアップブロックを無効化
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-notifications")
-    options.add_argument("--disable-infobars")
-    options.add_argument("--start-maximized")  # ウィンドウを最大化
+    
+    # キャッシュを無効化
+    options.add_argument("--disable-application-cache")
+    options.add_argument("--disable-cache")
+    options.add_argument("--disable-offline-load-stale-cache")
+    options.add_argument("--disk-cache-size=0")
     
     # Chrome User Dataディレクトリの設定
     user_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chrome_user_data_display")
     options.add_argument(f"--user-data-dir={user_data_dir}")
+    
+    # プリファレンス設定
+    prefs = {
+        "profile.default_content_setting_values.notifications": 2,  # 通知を無効化
+        "profile.default_content_settings.popups": 0,  # ポップアップを許可
+        "download.default_directory": os.getcwd(),  # ダウンロードディレクトリを現在のディレクトリに設定
+        "browser.cache.disk.enable": False,  # ディスクキャッシュを無効化
+        "browser.cache.memory.enable": False,  # メモリキャッシュを無効化
+        "browser.cache.offline.enable": False,  # オフラインキャッシュを無効化
+        "network.http.use-cache": False  # HTTPキャッシュを無効化
+    }
+    options.add_experimental_option("prefs", prefs)
+    
     return options
 
 def get_current_week_range():
@@ -681,6 +714,9 @@ if __name__ == "__main__":
                 # HTML更新前の待機
                 time.sleep(1)
                 
+                # タイムスタンプを追加してキャッシュを回避
+                timestamp = int(time.time())
+                
                 # HTMLファイルを更新（週間と月間で異なるA残込とK残込を使用）
                 with open(week_filename, "w", encoding="utf-8") as file:
                     html_content = create_html_content(week_a_total, week_k_total, is_week=True)
@@ -690,22 +726,51 @@ if __name__ == "__main__":
                     file.write(html_content)
                 time.sleep(2)
                 
-                # 現在のタブの内容を更新（JavaScriptを使用してページをリロード）
-                display_driver.execute_script("location.reload();")
-                time.sleep(2)
-
-                # 現在のタブのURLを取得して、週間表示か月間表示かを判断
+                # 現在のタブのURLとハンドルを記録
+                current_handle = display_driver.current_window_handle
                 current_url = display_driver.current_url
+                
+                # 現在のタブだけを更新（キャッシュを無効化するパラメータを追加）
                 if "week_result.html" in current_url:
                     # 週間データを表示
                     ak_total = week_a_total + week_k_total
                     remainder = 890 - ak_total
+                    
+                    # 週間HTMLをリロード（キャッシュ回避のためにタイムスタンプパラメータを追加）
+                    display_driver.get(f"{week_path}?t={timestamp}")
+                    
                     print(f"更新完了 [週間]: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
-                else:
+                elif "month_result.html" in current_url:
                     # 月間データを表示
                     ak_total = month_a_total + month_k_total
                     remainder = 890 - ak_total
+                    
+                    # 月間HTMLをリロード（キャッシュ回避のためにタイムスタンプパラメータを追加）
+                    display_driver.get(f"{month_path}?t={timestamp}")
+                    
                     print(f"更新完了 [月間]: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
+                
+                # 週間・月間両方のデータを常に表示
+                week_ak_total = week_a_total + week_k_total
+                week_remainder = 890 - week_ak_total
+                month_ak_total = month_a_total + month_k_total
+                month_remainder = 890 - month_ak_total
+                
+                # 目標値を読み込み
+                week_a_target, week_k_target = read_target_values()
+                month_a_target, month_k_target = read_month_target_values()
+                
+                # 目標までの残り件数
+                week_a_remainder = week_a_target - week_a_total
+                week_k_remainder = week_k_target - week_k_total
+                month_a_remainder = month_a_target - month_a_total
+                month_k_remainder = month_k_target - month_k_total
+                
+                print(f"週間データ: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {week_ak_total}")
+                print(f"週間目標: A目標 = {week_a_target}件まで残り{week_a_remainder}件, K目標 = {week_k_target}件まで残り{week_k_remainder}件")
+                print(f"月間データ: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {month_ak_total}")
+                print(f"月間目標: A目標 = {month_a_target}件まで残り{month_a_remainder}件, K目標 = {month_k_target}件まで残り{month_k_remainder}件")
+                print("-" * 80)
                 
                 # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）
                 time.sleep(55)
