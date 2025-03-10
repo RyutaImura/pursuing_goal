@@ -101,7 +101,7 @@ def get_oguchi_value(driver, page_url):
     """
     tomatoサイトの指定ページにアクセスし、
     ① 3/3-9の範囲で実質大口をカウント
-    ② <a>タグをすべて調べ、outerHTMLに "fa fa-wifi" が含まれる場合は除外
+    ② <a>タグをすべて調べ、outerHTMLに "fa fa-wifi" または "大[残未計]" が含まれる場合は除外
     戻り値は (total_oguchi, exclude_count, net_value) です。
     """
     driver.get(page_url)
@@ -142,8 +142,8 @@ def get_oguchi_value(driver, page_url):
                     if any(keyword in text for keyword in ["包", "大", "長", "非長", "陰大"]):
                         total_oguchi += 1
                     
-                    # 除外カウント（wifi）
-                    if "fa fa-wifi" in outer_html:
+                    # 除外カウント（wifi または 大[残未計]）
+                    if "fa fa-wifi" in outer_html or "大[残未計]" in outer_html:
                         exclude_count += 1
                         
             except NoSuchElementException:
