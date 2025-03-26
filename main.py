@@ -214,20 +214,41 @@ def read_month_target_values():
         # デフォルト値を返す
         return 0, 0
 
-def create_html_content(a_total, k_total, is_week=True):
+def read_last_target_values():
+    """
+    最終目標値をテキストファイルから読み取ります。
+    ファイルが存在しない場合はデフォルト値を使用します。
+    """
+    try:
+        with open("last_target_values.txt", "r", encoding="utf-8") as file:
+            lines = file.readlines()
+            target1 = int(lines[0].strip())
+            target2 = int(lines[1].strip())
+            return target1, target2
+    except Exception as e:
+        print(f"最終目標値ファイルの読み込みエラー: {e}")
+        # デフォルト値を返す
+        return 0, 0
+
+def create_html_content(a_total, k_total, is_week=True, is_last=False):
     """
     HTMLコンテンツを生成します。
     is_week: Trueの場合はweek_result.html用、Falseの場合はmonth_result.html用
+    is_last: Trueの場合はlast_result.html用
     """
-    # 目標値を読み取り（週間/月間で分ける）
+    # 目標値を読み取り（週間/月間/最終で分ける）
     if is_week:
         a_target, k_target = read_target_values()
+    elif is_last:
+        a_target, k_target = read_last_target_values()
     else:
         a_target, k_target = read_month_target_values()
     
     ak_total = a_total + k_total
-    remainder_a = a_target - a_total
-    remainder_k = k_target - k_total
+    
+    if is_week or not is_last:
+        remainder_a = a_target - a_total
+        remainder_k = k_target - k_total
     
     # 現在の週番号または月を取得
     current_date = datetime.now()
@@ -237,35 +258,59 @@ def create_html_content(a_total, k_total, is_week=True):
     # 画像の相対パスを使用
     achievement_img_path = "achievement.png"
 
-    if remainder_a <= 0:
-        display_a = f'<span style="white-space: nowrap;">★{abs(remainder_a)}件<img src="{achievement_img_path}" style="width:8vh; height:8vh; vertical-align: middle;"></span>'
+    # タイトル設定
+    if is_week:
+        title = f"{week_number}w目標！"
+    elif is_last:
+        title = "最終目標！"
     else:
-        display_a = f"{remainder_a}件"
-        
-    if remainder_k <= 0:
-        display_k = f'<span style="white-space: nowrap;">★{abs(remainder_k)}件<img src="{achievement_img_path}" style="width:8vh; height:8vh; vertical-align: middle;"></span>'
-    else:
-        display_k = f"{remainder_k}件"
+        title = f"{current_month}月目標！"
     
     # 右下セクションの内容を条件分岐
-    if is_week:
+    if is_last:
+        # 最終目標用の表示（①〇〇件まで：➁〇〇件, ③〇〇件まで：④〇〇件）
+        target1, target3 = a_target, k_target
+        target2 = target1 - ak_total
+        target4 = target3 - ak_total
+        
+        # 目標達成時の★と画像表示
+        if target2 <= 0:
+            display_target2 = f'<span style="white-space: nowrap;">★{abs(target2)}件<img src="{achievement_img_path}" style="width:7vh; height:7vh; vertical-align: middle;"></span>'
+        else:
+            display_target2 = f"{target2}件"
+            
+        if target4 <= 0:
+            display_target4 = f'<span style="white-space: nowrap;">★{abs(target4)}件<img src="{achievement_img_path}" style="width:7vh; height:7vh; vertical-align: middle;"></span>'
+        else:
+            display_target4 = f"{target4}件"
+        
         target_section = f"""
         <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 9vh; white-space: nowrap;">{a_target}件まで: <span class="important" style="font-size: 10vh;">{display_a}</span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">{target1}件まで: <span class="important" style="font-size: 8vh;">{display_target2}</span></div>
             </div>
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 9vh; white-space: nowrap;">{k_target}件まで: <span class="important" style="font-size: 10vh;">{display_k}</span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">{target3}件まで: <span class="important" style="font-size: 8vh;">{display_target4}</span></div>
             </div>
         </div>"""
     else:
+        if remainder_a <= 0:
+            display_a = f'<span style="white-space: nowrap;">★{abs(remainder_a)}件<img src="{achievement_img_path}" style="width:7vh; height:7vh; vertical-align: middle;"></span>'
+        else:
+            display_a = f"{remainder_a}件"
+            
+        if remainder_k <= 0:
+            display_k = f'<span style="white-space: nowrap;">★{abs(remainder_k)}件<img src="{achievement_img_path}" style="width:7vh; height:7vh; vertical-align: middle;"></span>'
+        else:
+            display_k = f"{remainder_k}件"
+        
         target_section = f"""
         <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 9vh; white-space: nowrap;">{a_target}件まで: <span class="important" style="font-size: 10vh;">{display_a}</span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">{a_target}件まで: <span class="important" style="font-size: 8vh;">{display_a}</span></div>
             </div>
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 9vh; white-space: nowrap;">{k_target}件まで: <span class="important" style="font-size: 10vh;">{display_k}</span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">{k_target}件まで: <span class="important" style="font-size: 8vh;">{display_k}</span></div>
             </div>
         </div>"""
 
@@ -279,7 +324,7 @@ def create_html_content(a_total, k_total, is_week=True):
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</title>
+  <title>{title}</title>
   <style>
     html, body {{
       margin: 0;
@@ -352,7 +397,7 @@ def create_html_content(a_total, k_total, is_week=True):
   </style>
 </head>
 <body>
-  <h1>{'{}w目標！'.format(week_number) if is_week else '{}月目標！'.format(current_month)}</h1>
+  <h1>{title}</h1>
   <div class="container">
     <div class="section">
       <p>A残込　<span class="important">{a_total}</span> 件</p>
@@ -587,8 +632,10 @@ if __name__ == "__main__":
         # ④ HTML表示用ドライバの設定（非ヘッドレスモード）
         week_filename = "week_result.html"
         month_filename = "month_result.html"
+        last_filename = "last_result.html"
         week_path = "file:///" + os.path.abspath(week_filename)
         month_path = "file:///" + os.path.abspath(month_filename)
+        last_path = "file:///" + os.path.abspath(last_filename)
 
         display_service = Service(chromedriver_path)
         display_options = create_display_options()
@@ -630,12 +677,19 @@ if __name__ == "__main__":
             time.sleep(2)
             month_k_total = UenoNetMonth + KyotoNetMonth
 
-            # 両方のHTMLファイルを作成（週間用と月間用で異なる形式）
+            # 最終目標表示用のデータ（月間と同じデータを使用）
+            last_a_total = month_a_total
+            last_k_total = month_k_total
+
+            # 3つのHTMLファイルを作成
             with open(week_filename, "w", encoding="utf-8") as file:
                 html_content = create_html_content(week_a_total, week_k_total, is_week=True)
                 file.write(html_content)
             with open(month_filename, "w", encoding="utf-8") as file:
                 html_content = create_html_content(month_a_total, month_k_total, is_week=False)
+                file.write(html_content)
+            with open(last_filename, "w", encoding="utf-8") as file:
+                html_content = create_html_content(last_a_total, last_k_total, is_week=False, is_last=True)
                 file.write(html_content)
             
             logging.info("初期データ取得・HTML作成完了")
@@ -643,7 +697,7 @@ if __name__ == "__main__":
             logging.error(f"初期データ取得でエラー発生: {str(e)}")
             # エラー時は初期表示用HTMLを作成
             initial_html = "<html><body><h1>データ取得中にエラーが発生しました...</h1></body></html>"
-            for filename in [week_filename, month_filename]:
+            for filename in [week_filename, month_filename, last_filename]:
                 with open(filename, "w", encoding="utf-8") as file:
                     file.write(initial_html)
 
@@ -651,13 +705,22 @@ if __name__ == "__main__":
         display_driver.get(week_path)
         time.sleep(2)
 
-        # 新しいタブを開く
+        # 新しいタブを開く（月間目標用）
         display_driver.execute_script("window.open('', '_blank');")
         time.sleep(2)
 
         # 新しいタブに切り替えて月間目標を表示
         display_driver.switch_to.window(display_driver.window_handles[-1])
         display_driver.get(month_path)
+        time.sleep(2)
+
+        # 新しいタブを開く（最終目標用）
+        display_driver.execute_script("window.open('', '_blank');")
+        time.sleep(2)
+
+        # 新しいタブに切り替えて最終目標を表示
+        display_driver.switch_to.window(display_driver.window_handles[-1])
+        display_driver.get(last_path)
         time.sleep(2)
 
         logging.info("初期HTML表示完了")
@@ -711,18 +774,25 @@ if __name__ == "__main__":
                 time.sleep(2)
                 month_k_total = UenoNetMonth + KyotoNetMonth
 
+                # 最終目標表示用のデータ（月間と同じデータを使用）
+                last_a_total = month_a_total
+                last_k_total = month_k_total
+
                 # HTML更新前の待機
                 time.sleep(1)
                 
                 # タイムスタンプを追加してキャッシュを回避
                 timestamp = int(time.time())
                 
-                # HTMLファイルを更新（週間と月間で異なるA残込とK残込を使用）
+                # HTMLファイルを更新
                 with open(week_filename, "w", encoding="utf-8") as file:
                     html_content = create_html_content(week_a_total, week_k_total, is_week=True)
                     file.write(html_content)
                 with open(month_filename, "w", encoding="utf-8") as file:
                     html_content = create_html_content(month_a_total, month_k_total, is_week=False)
+                    file.write(html_content)
+                with open(last_filename, "w", encoding="utf-8") as file:
+                    html_content = create_html_content(last_a_total, last_k_total, is_week=False, is_last=True)
                     file.write(html_content)
                 time.sleep(2)
                 
@@ -749,27 +819,46 @@ if __name__ == "__main__":
                     display_driver.get(f"{month_path}?t={timestamp}")
                     
                     print(f"更新完了 [月間]: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
+                elif "last_result.html" in current_url:
+                    # 最終目標データを表示
+                    ak_total = last_a_total + last_k_total
+                    
+                    # 最終目標HTMLをリロード（キャッシュ回避のためにタイムスタンプパラメータを追加）
+                    display_driver.get(f"{last_path}?t={timestamp}")
+                    
+                    # 最終目標値の読み込み
+                    target1, target3 = read_last_target_values()
+                    target2 = target1 - ak_total
+                    target4 = target3 - ak_total
+                    
+                    print(f"更新完了 [最終]: A残込 = {last_a_total}, K残込 = {last_k_total}, AK残込 = {ak_total}（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
+                    print(f"目標1: {target1}件まで残り{target2}件, 目標2: {target3}件まで残り{target4}件")
                 
-                # 週間・月間両方のデータを常に表示
+                # 週間・月間・最終目標のデータを常に表示
                 week_ak_total = week_a_total + week_k_total
                 week_remainder = 890 - week_ak_total
                 month_ak_total = month_a_total + month_k_total
                 month_remainder = 890 - month_ak_total
+                last_ak_total = last_a_total + last_k_total
                 
                 # 目標値を読み込み
                 week_a_target, week_k_target = read_target_values()
                 month_a_target, month_k_target = read_month_target_values()
+                last_target1, last_target3 = read_last_target_values()
                 
                 # 目標までの残り件数
                 week_a_remainder = week_a_target - week_a_total
                 week_k_remainder = week_k_target - week_k_total
                 month_a_remainder = month_a_target - month_a_total
                 month_k_remainder = month_k_target - month_k_total
+                last_target2 = last_target1 - last_ak_total
+                last_target4 = last_target3 - last_ak_total
                 
                 print(f"週間データ: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {week_ak_total}")
                 print(f"週間目標: A目標 = {week_a_target}件まで残り{week_a_remainder}件, K目標 = {week_k_target}件まで残り{week_k_remainder}件")
                 print(f"月間データ: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {month_ak_total}")
                 print(f"月間目標: A目標 = {month_a_target}件まで残り{month_a_remainder}件, K目標 = {month_k_target}件まで残り{month_k_remainder}件")
+                print(f"最終目標: 目標1 = {last_target1}件まで残り{last_target2}件, 目標2 = {last_target3}件まで残り{last_target4}件")
                 print("-" * 80)
                 
                 # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）
