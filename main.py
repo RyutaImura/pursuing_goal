@@ -222,13 +222,17 @@ def read_last_target_values():
     try:
         with open("last_target_values.txt", "r", encoding="utf-8") as file:
             lines = file.readlines()
-            target1 = int(lines[0].strip())
-            target2 = int(lines[1].strip())
-            return target1, target2
+            if len(lines) >= 3:  # 少なくとも3行あることを確認
+                target1 = int(lines[0].strip())
+                target3 = int(lines[1].strip())
+                target5 = int(lines[2].strip())
+                return target1, target3, target5
+            else:
+                logging.warning("last_target_values.txtの行数が不足しています")
+                return 0, 0, 0
     except Exception as e:
-        print(f"最終目標値ファイルの読み込みエラー: {e}")
-        # デフォルト値を返す
-        return 0, 0
+        logging.error(f"最終目標値ファイルの読み込みエラー: {e}")
+        return 0, 0, 0
 
 def create_html_content(a_total, k_total, is_week=True, is_last=False):
     """
@@ -240,7 +244,9 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
     if is_week:
         a_target, k_target = read_target_values()
     elif is_last:
-        a_target, k_target = read_last_target_values()
+        target1, target3, target5 = read_last_target_values()  # 3つの値を正しく受け取る
+        a_target = target1  # 一時的な対応として最初の値をa_targetに使用
+        k_target = 0  # 一時的な対応として0をk_targetに使用
     else:
         a_target, k_target = read_month_target_values()
     
@@ -268,10 +274,11 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
     
     # 右下セクションの内容を条件分岐
     if is_last:
-        # 最終目標用の表示（①〇〇件まで：➁〇〇件, ③〇〇件まで：④〇〇件）
-        target1, target3 = a_target, k_target
+        # 最終目標用の表示（①〇〇件まで：➁〇〇件, ③〇〇件まで：④〇〇件, ⑤〇〇件まで：⑥〇〇件）
+        target1, target3, target5 = read_last_target_values()  # 3つの値を正しく受け取る
         target2 = target1 - ak_total
         target4 = target3 - ak_total
+        target6 = target5 - ak_total
         
         # 目標達成時の★と画像表示
         if target2 <= 0:
@@ -283,6 +290,11 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
             display_target4 = f'<span style="white-space: nowrap;">★{abs(target4)}件<img src="{achievement_img_path}" style="width:7vh; height:7vh; vertical-align: middle;"></span>'
         else:
             display_target4 = f"{target4}件"
+            
+        if target6 <= 0:
+            display_target6 = f'<span style="white-space: nowrap;">★{abs(target6)}件<img src="{achievement_img_path}" style="width:7vh; height:7vh; vertical-align: middle;"></span>'
+        else:
+            display_target6 = f"{target6}件"
         
         target_section = f"""
         <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
@@ -291,6 +303,9 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
             </div>
             <div style="text-align: center; margin: 0.5vh 0;">
                 <div style="font-size: 7vh; white-space: nowrap;">{target3}件まで: <span class="important" style="font-size: 8vh;">{display_target4}</span></div>
+            </div>
+            <div style="text-align: center; margin: 0.5vh 0;">
+                <div style="font-size: 7vh; white-space: nowrap;">{target5}件まで: <span class="important" style="font-size: 8vh;">{display_target6}</span></div>
             </div>
         </div>"""
     else:
@@ -525,7 +540,13 @@ def create_display_options():
         "browser.cache.disk.enable": False,  # ディスクキャッシュを無効化
         "browser.cache.memory.enable": False,  # メモリキャッシュを無効化
         "browser.cache.offline.enable": False,  # オフラインキャッシュを無効化
-        "network.http.use-cache": False  # HTTPキャッシュを無効化
+        "network.http.use-cache": False,  # HTTPキャッシュを無効化
+        "profile.default_content_setting_values.media_stream": 2,  # メディアストリームを無効化
+        "profile.default_content_setting_values.geolocation": 2,  # 位置情報を無効化
+        "profile.default_content_setting_values.automatic_downloads": 1,  # 自動ダウンロードを許可
+        "profile.default_content_setting_values.mixed_script": 1,  # 混合スクリプトを許可
+        "profile.default_content_setting_values.media_stream_mic": 2,  # マイクを無効化
+        "profile.default_content_setting_values.media_stream_camera": 2  # カメラを無効化
     }
     options.add_experimental_option("prefs", prefs)
     
@@ -585,6 +606,19 @@ def get_chrome_driver_path():
     except Exception as e:
         logging.error(f"ChromeDriverの設定中にエラーが発生: {str(e)}")
         raise
+
+def refresh_browser_session(driver):
+    """
+    ブラウザセッションを更新します。
+    セッションが無効な場合は新しいセッションを作成します。
+    """
+    try:
+        # 現在のURLを取得してセッションの状態を確認
+        current_url = driver.current_url
+        return True
+    except Exception as e:
+        logging.error(f"ブラウザセッションの更新に失敗: {e}")
+        return False
 
 # -------------------------------
 # メイン処理開始
@@ -729,6 +763,25 @@ if __name__ == "__main__":
         # ⑤ 定期更新ループ（1分毎）
         while True:
             try:
+                # ブラウザセッションの状態を確認
+                if not refresh_browser_session(display_driver):
+                    logging.warning("ブラウザセッションが無効です。新しいセッションを作成します。")
+                    display_driver.quit()
+                    display_driver = webdriver.Chrome(service=display_service, options=display_options)
+                    # 各タブを再作成
+                    display_driver.get(week_path)
+                    time.sleep(2)
+                    display_driver.execute_script("window.open('', '_blank');")
+                    time.sleep(2)
+                    display_driver.switch_to.window(display_driver.window_handles[-1])
+                    display_driver.get(month_path)
+                    time.sleep(2)
+                    display_driver.execute_script("window.open('', '_blank');")
+                    time.sleep(2)
+                    display_driver.switch_to.window(display_driver.window_handles[-1])
+                    display_driver.get(last_path)
+                    time.sleep(2)
+
                 # 週間データ取得用URL
                 target_url = get_week_url()
                 extraction_driver.get(target_url)
@@ -827,12 +880,12 @@ if __name__ == "__main__":
                     display_driver.get(f"{last_path}?t={timestamp}")
                     
                     # 最終目標値の読み込み
-                    target1, target3 = read_last_target_values()
+                    target1, target3, target5 = read_last_target_values()
                     target2 = target1 - ak_total
                     target4 = target3 - ak_total
                     
                     print(f"更新完了 [最終]: A残込 = {last_a_total}, K残込 = {last_k_total}, AK残込 = {ak_total}（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
-                    print(f"目標1: {target1}件まで残り{target2}件, 目標2: {target3}件まで残り{target4}件")
+                    print(f"目標1: {target1}件まで残り{target2}件, 目標2: {target3}件まで残り{target4}件, 目標3: {target5}件まで残り{target5 - ak_total}件")
                 
                 # 週間・月間・最終目標のデータを常に表示
                 week_ak_total = week_a_total + week_k_total
@@ -844,7 +897,7 @@ if __name__ == "__main__":
                 # 目標値を読み込み
                 week_a_target, week_k_target = read_target_values()
                 month_a_target, month_k_target = read_month_target_values()
-                last_target1, last_target3 = read_last_target_values()
+                last_target1, last_target3, last_target5 = read_last_target_values()
                 
                 # 目標までの残り件数
                 week_a_remainder = week_a_target - week_a_total
@@ -858,7 +911,7 @@ if __name__ == "__main__":
                 print(f"週間目標: A目標 = {week_a_target}件まで残り{week_a_remainder}件, K目標 = {week_k_target}件まで残り{week_k_remainder}件")
                 print(f"月間データ: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {month_ak_total}")
                 print(f"月間目標: A目標 = {month_a_target}件まで残り{month_a_remainder}件, K目標 = {month_k_target}件まで残り{month_k_remainder}件")
-                print(f"最終目標: 目標1 = {last_target1}件まで残り{last_target2}件, 目標2 = {last_target3}件まで残り{last_target4}件")
+                print(f"最終目標: 目標1 = {last_target1}件まで残り{last_target2}件, 目標2 = {last_target3}件まで残り{last_target4}件, 目標3 = {last_target5}件まで残り{last_target5 - last_ak_total}件")
                 print("-" * 80)
                 
                 # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）
