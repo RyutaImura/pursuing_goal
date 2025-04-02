@@ -278,6 +278,7 @@ def get_target_values_from_storage(driver):
     HTMLの属性から更新された目標値を取得し、対応するテキストファイルに保存します。
     """
     try:
+        # LocalStorageの値を確認
         # 週間目標値の取得と保存
         week_a = driver.execute_script("return localStorage.getItem('week_a_target')")
         week_k = driver.execute_script("return localStorage.getItem('week_k_target')")
@@ -300,6 +301,49 @@ def get_target_values_from_storage(driver):
         return True
     except Exception as e:
         logging.error(f"目標値の取得でエラー: {str(e)}")
+        return False
+
+def check_for_target_updates(driver):
+    """
+    HTML属性から目標値の即時更新をチェックします。
+    更新があった場合は、すぐにテキストファイルに保存し、HTMLを再生成します。
+    """
+    try:
+        # 更新フラグの確認
+        is_updated = driver.execute_script("return document.body.getAttribute('data-target-updated')")
+        if is_updated == 'true':
+            # 更新タイプの取得
+            target_type = driver.execute_script("return document.body.getAttribute('data-target-type')")
+            
+            if target_type == 'week':
+                # 週間目標値の更新
+                a_target = int(driver.execute_script("return document.body.getAttribute('data-target-a_target')"))
+                k_target = int(driver.execute_script("return document.body.getAttribute('data-target-k_target')"))
+                save_target_values(a_target, k_target)
+                logging.info(f"週間目標値を即時更新: A={a_target}, K={k_target}")
+            
+            elif target_type == 'month':
+                # 月間目標値の更新
+                a_target = int(driver.execute_script("return document.body.getAttribute('data-target-a_target')"))
+                k_target = int(driver.execute_script("return document.body.getAttribute('data-target-k_target')"))
+                save_month_target_values(a_target, k_target)
+                logging.info(f"月間目標値を即時更新: A={a_target}, K={k_target}")
+            
+            elif target_type == 'last':
+                # 最終目標値の更新
+                target1 = int(driver.execute_script("return document.body.getAttribute('data-target-target1')"))
+                target3 = int(driver.execute_script("return document.body.getAttribute('data-target-target3')"))
+                target5 = int(driver.execute_script("return document.body.getAttribute('data-target-target5')"))
+                save_last_target_values(target1, target3, target5)
+                logging.info(f"最終目標値を即時更新: 最低={target1}, 第二={target3}, 最高={target5}")
+            
+            # 更新フラグをリセット
+            driver.execute_script("document.body.removeAttribute('data-target-updated')")
+            return True
+        
+        return False
+    except Exception as e:
+        logging.error(f"目標値の即時更新チェックでエラー: {str(e)}")
         return False
 
 def create_html_content(a_total, k_total, is_week=True, is_last=False):
@@ -616,30 +660,70 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
       document.getElementById('targetModal').style.display = 'block';
     }}
     
+    // Seleniumからのアクセスを容易にするためにカスタム属性を設定する関数
+    function setTargetAttributes(type, values) {{
+      document.body.setAttribute('data-target-type', type);
+      for (let key in values) {{
+        document.body.setAttribute('data-target-' + key, values[key]);
+      }}
+      document.body.setAttribute('data-target-updated', 'true');
+    }}
+    
     function saveWeekTargets() {{
       const aTarget = document.getElementById('week_a_target').value;
       const kTarget = document.getElementById('week_k_target').value;
+      
+      // LocalStorageに保存
       localStorage.setItem('week_a_target', aTarget);
       localStorage.setItem('week_k_target', kTarget);
-      location.reload();
+      
+      // テキストファイルへの即時更新のためにカスタム属性を設定
+      setTargetAttributes('week', {{
+        a_target: aTarget,
+        k_target: kTarget
+      }});
+      
+      // モーダルを閉じる
+      document.getElementById('targetModal').style.display = 'none';
     }}
     
     function saveMonthTargets() {{
       const aTarget = document.getElementById('month_a_target').value;
       const kTarget = document.getElementById('month_k_target').value;
+      
+      // LocalStorageに保存
       localStorage.setItem('month_a_target', aTarget);
       localStorage.setItem('month_k_target', kTarget);
-      location.reload();
+      
+      // テキストファイルへの即時更新のためにカスタム属性を設定
+      setTargetAttributes('month', {{
+        a_target: aTarget,
+        k_target: kTarget
+      }});
+      
+      // モーダルを閉じる
+      document.getElementById('targetModal').style.display = 'none';
     }}
     
     function saveLastTargets() {{
       const target1 = document.getElementById('last_target1').value;
       const target3 = document.getElementById('last_target3').value;
       const target5 = document.getElementById('last_target5').value;
+      
+      // LocalStorageに保存
       localStorage.setItem('last_target1', target1);
       localStorage.setItem('last_target3', target3);
       localStorage.setItem('last_target5', target5);
-      location.reload();
+      
+      // テキストファイルへの即時更新のためにカスタム属性を設定
+      setTargetAttributes('last', {{
+        target1: target1,
+        target3: target3,
+        target5: target5
+      }});
+      
+      // モーダルを閉じる
+      document.getElementById('targetModal').style.display = 'none';
     }}
     
     window.onclick = function(event) {{
@@ -1052,29 +1136,44 @@ if __name__ == "__main__":
                 last_a_total = month_a_total
                 last_k_total = month_k_total
 
-                # HTML更新前の待機
-                time.sleep(1)
-                
-                # タイムスタンプを追加してキャッシュを回避
-                timestamp = int(time.time())
-                
-                # HTMLファイルを更新
-                with open(week_filename, "w", encoding="utf-8") as file:
-                    html_content = create_html_content(week_a_total, week_k_total, is_week=True)
-                    file.write(html_content)
-                with open(month_filename, "w", encoding="utf-8") as file:
-                    html_content = create_html_content(month_a_total, month_k_total, is_week=False)
-                    file.write(html_content)
-                with open(last_filename, "w", encoding="utf-8") as file:
-                    html_content = create_html_content(last_a_total, last_k_total, is_week=False, is_last=True)
-                    file.write(html_content)
-                time.sleep(2)
-                
                 # 現在のタブのURLとハンドルを記録
                 current_handle = display_driver.current_window_handle
                 current_url = display_driver.current_url
                 
-                # 現在のタブから目標値を更新
+                # 即時更新をチェックする（モーダルから変更された場合の処理）
+                if check_for_target_updates(display_driver):
+                    # 目標値をすぐに再読み込み
+                    week_a_target, week_k_target = read_target_values()
+                    month_a_target, month_k_target = read_month_target_values()
+                    last_target1, last_target3, last_target5 = read_last_target_values()
+                    
+                    # HTMLファイルを即時更新
+                    with open(week_filename, "w", encoding="utf-8") as file:
+                        html_content = create_html_content(week_a_total, week_k_total, is_week=True)
+                        file.write(html_content)
+                    with open(month_filename, "w", encoding="utf-8") as file:
+                        html_content = create_html_content(month_a_total, month_k_total, is_week=False)
+                        file.write(html_content)
+                    with open(last_filename, "w", encoding="utf-8") as file:
+                        html_content = create_html_content(last_a_total, last_k_total, is_week=False, is_last=True)
+                        file.write(html_content)
+                    
+                    # タイムスタンプを追加してキャッシュを回避
+                    timestamp = int(time.time())
+                    
+                    # 現在のタブのURLに基づいて、適切なHTMLファイルを更新
+                    if "week_result.html" in current_url:
+                        display_driver.get(f"{week_path}?t={timestamp}")
+                    elif "month_result.html" in current_url:
+                        display_driver.get(f"{month_path}?t={timestamp}")
+                    elif "last_result.html" in current_url:
+                        display_driver.get(f"{last_path}?t={timestamp}")
+                    else:
+                        # URLが不明な場合は、現在のタブのURLを維持
+                        display_driver.get(current_url)
+                
+                # 通常の定期更新（1分ごと）
+                # 現在のタブから目標値を更新（localStorageを使用）
                 get_target_values_from_storage(display_driver)
                 
                 # 目標値を再読み込み（全てのタブでの更新を反映）
@@ -1139,7 +1238,7 @@ if __name__ == "__main__":
                 print("-" * 80)
                 
                 # 次の更新までの待機（55秒に短縮し、処理時間の余裕を持たせる）
-                time.sleep(55)
+                time.sleep(1)
             except Exception as e:
                 logging.error(f"メインループでエラー発生: {str(e)}")
                 time.sleep(60)  # エラー時も1分待機してから再試行

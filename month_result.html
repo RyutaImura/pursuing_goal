@@ -159,19 +159,19 @@
   <h1>4月目標！</h1>
   <div class="container">
     <div class="section">
-      <p>A残込　<span class="important">131</span> 件</p>
+      <p>A残込　<span class="important">148</span> 件</p>
     </div>
     <div class="section">
       <p>K残込　<span class="important">18</span> 件</p>
     </div>
     <div class="section">
-      <p>AK残込　<span class="important">149</span> 件</p>
+      <p>AK残込　<span class="important">166</span> 件</p>
     </div>
     <div class="section small">
       
         <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 7vh; white-space: nowrap;">984件まで: <span class="important" style="font-size: 8vh;">853件</span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">984件まで: <span class="important" style="font-size: 8vh;">836件</span></div>
             </div>
             <div style="text-align: center; margin: 0.5vh 0;">
                 <div style="font-size: 7vh; white-space: nowrap;">102件まで: <span class="important" style="font-size: 8vh;">84件</span></div>
@@ -179,36 +179,76 @@
         </div>
     </div>
   </div>
-  <div class="timestamp">1743560168</div>
+  <div class="timestamp">1743570046</div>
   <script>
     function showModal() {
       document.getElementById('targetModal').style.display = 'block';
     }
     
+    // Seleniumからのアクセスを容易にするためにカスタム属性を設定する関数
+    function setTargetAttributes(type, values) {
+      document.body.setAttribute('data-target-type', type);
+      for (let key in values) {
+        document.body.setAttribute('data-target-' + key, values[key]);
+      }
+      document.body.setAttribute('data-target-updated', 'true');
+    }
+    
     function saveWeekTargets() {
       const aTarget = document.getElementById('week_a_target').value;
       const kTarget = document.getElementById('week_k_target').value;
+      
+      // LocalStorageに保存
       localStorage.setItem('week_a_target', aTarget);
       localStorage.setItem('week_k_target', kTarget);
-      location.reload();
+      
+      // テキストファイルへの即時更新のためにカスタム属性を設定
+      setTargetAttributes('week', {
+        a_target: aTarget,
+        k_target: kTarget
+      });
+      
+      // モーダルを閉じる
+      document.getElementById('targetModal').style.display = 'none';
     }
     
     function saveMonthTargets() {
       const aTarget = document.getElementById('month_a_target').value;
       const kTarget = document.getElementById('month_k_target').value;
+      
+      // LocalStorageに保存
       localStorage.setItem('month_a_target', aTarget);
       localStorage.setItem('month_k_target', kTarget);
-      location.reload();
+      
+      // テキストファイルへの即時更新のためにカスタム属性を設定
+      setTargetAttributes('month', {
+        a_target: aTarget,
+        k_target: kTarget
+      });
+      
+      // モーダルを閉じる
+      document.getElementById('targetModal').style.display = 'none';
     }
     
     function saveLastTargets() {
       const target1 = document.getElementById('last_target1').value;
       const target3 = document.getElementById('last_target3').value;
       const target5 = document.getElementById('last_target5').value;
+      
+      // LocalStorageに保存
       localStorage.setItem('last_target1', target1);
       localStorage.setItem('last_target3', target3);
       localStorage.setItem('last_target5', target5);
-      location.reload();
+      
+      // テキストファイルへの即時更新のためにカスタム属性を設定
+      setTargetAttributes('last', {
+        target1: target1,
+        target3: target3,
+        target5: target5
+      });
+      
+      // モーダルを閉じる
+      document.getElementById('targetModal').style.display = 'none';
     }
     
     window.onclick = function(event) {
