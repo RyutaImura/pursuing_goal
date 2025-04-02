@@ -75,32 +75,155 @@
     .timestamp {
       display: none;
     }
+    
+    /* モーダル関連のスタイル */
+    .target-change-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      z-index: 1000;
+    }
+    .target-change-btn:hover {
+      background-color: #2980b9;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 1001;
+    }
+    .modal-content {
+      position: relative;
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 5px;
+    }
+    .input-group {
+      margin: 15px 0;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .modal-content button {
+      width: 100%;
+      padding: 10px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .modal-content button:hover {
+      background-color: #2980b9;
+    }
   </style>
 </head>
 <body>
+  <button class="target-change-btn" onclick="showModal()">目標数変更</button>
+  <div id="targetModal" class="modal">
+    
+        <div class="modal-content">
+            <h2>最終目標値の変更</h2>
+            <div class="input-group">
+                <label>最低目標</label>
+                <input type="number" id="last_target1" value="930">
+            </div>
+            <div class="input-group">
+                <label>第二目標</label>
+                <input type="number" id="last_target3" value="940">
+            </div>
+            <div class="input-group">
+                <label>最高目標</label>
+                <input type="number" id="last_target5" value="950">
+            </div>
+            <button onclick="saveLastTargets()">変更</button>
+        </div>
+  </div>
   <h1>最終目標！</h1>
   <div class="container">
     <div class="section">
-      <p>A残込　<span class="important">814</span> 件</p>
+      <p>A残込　<span class="important">131</span> 件</p>
     </div>
     <div class="section">
-      <p>K残込　<span class="important">90</span> 件</p>
+      <p>K残込　<span class="important">18</span> 件</p>
     </div>
     <div class="section">
-      <p>AK残込　<span class="important">904</span> 件</p>
+      <p>AK残込　<span class="important">149</span> 件</p>
     </div>
     <div class="section small">
       
         <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 7vh; white-space: nowrap;">900件まで: <span class="important" style="font-size: 8vh;"><span style="white-space: nowrap;">★4件<img src="achievement.png" style="width:7vh; height:7vh; vertical-align: middle;"></span></span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">930件まで: <span class="important" style="font-size: 8vh;">781件</span></div>
             </div>
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 7vh; white-space: nowrap;">910件まで: <span class="important" style="font-size: 8vh;">6件</span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">940件まで: <span class="important" style="font-size: 8vh;">791件</span></div>
+            </div>
+            <div style="text-align: center; margin: 0.5vh 0;">
+                <div style="font-size: 7vh; white-space: nowrap;">950件まで: <span class="important" style="font-size: 8vh;">801件</span></div>
             </div>
         </div>
     </div>
   </div>
-  <div class="timestamp">1742969586</div>
+  <div class="timestamp">1743560168</div>
+  <script>
+    function showModal() {
+      document.getElementById('targetModal').style.display = 'block';
+    }
+    
+    function saveWeekTargets() {
+      const aTarget = document.getElementById('week_a_target').value;
+      const kTarget = document.getElementById('week_k_target').value;
+      localStorage.setItem('week_a_target', aTarget);
+      localStorage.setItem('week_k_target', kTarget);
+      location.reload();
+    }
+    
+    function saveMonthTargets() {
+      const aTarget = document.getElementById('month_a_target').value;
+      const kTarget = document.getElementById('month_k_target').value;
+      localStorage.setItem('month_a_target', aTarget);
+      localStorage.setItem('month_k_target', kTarget);
+      location.reload();
+    }
+    
+    function saveLastTargets() {
+      const target1 = document.getElementById('last_target1').value;
+      const target3 = document.getElementById('last_target3').value;
+      const target5 = document.getElementById('last_target5').value;
+      localStorage.setItem('last_target1', target1);
+      localStorage.setItem('last_target3', target3);
+      localStorage.setItem('last_target5', target5);
+      location.reload();
+    }
+    
+    window.onclick = function(event) {
+      const modal = document.getElementById('targetModal');
+      if (event.target == modal) {
+        modal.style.display = 'none';
+      }
+    }
+  </script>
 </body>
 </html>

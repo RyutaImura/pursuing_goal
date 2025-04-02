@@ -198,6 +198,19 @@ def read_target_values():
         # デフォルト値を返す
         return 0, 0
 
+def save_target_values(a_target, k_target):
+    """
+    週間目標値をテキストファイルに保存します。
+    """
+    try:
+        with open("week_target_values.txt", "w", encoding="utf-8") as file:
+            file.write(f"{a_target}\n{k_target}")
+        logging.info(f"週間目標値を保存: A={a_target}, K={k_target}")
+        return True
+    except Exception as e:
+        logging.error(f"週間目標値の保存でエラー: {str(e)}")
+        return False
+
 def read_month_target_values():
     """
     月間目標値をテキストファイルから読み取ります。
@@ -213,6 +226,19 @@ def read_month_target_values():
         print(f"月間目標値ファイルの読み込みエラー: {e}")
         # デフォルト値を返す
         return 0, 0
+
+def save_month_target_values(a_target, k_target):
+    """
+    月間目標値をテキストファイルに保存します。
+    """
+    try:
+        with open("month_target_values.txt", "w", encoding="utf-8") as file:
+            file.write(f"{a_target}\n{k_target}")
+        logging.info(f"月間目標値を保存: A={a_target}, K={k_target}")
+        return True
+    except Exception as e:
+        logging.error(f"月間目標値の保存でエラー: {str(e)}")
+        return False
 
 def read_last_target_values():
     """
@@ -233,6 +259,48 @@ def read_last_target_values():
     except Exception as e:
         logging.error(f"最終目標値ファイルの読み込みエラー: {e}")
         return 0, 0, 0
+
+def save_last_target_values(target1, target3, target5):
+    """
+    最終目標値をテキストファイルに保存します。
+    """
+    try:
+        with open("last_target_values.txt", "w", encoding="utf-8") as file:
+            file.write(f"{target1}\n{target3}\n{target5}")
+        logging.info(f"最終目標値を保存: 最低={target1}, 第二={target3}, 最高={target5}")
+        return True
+    except Exception as e:
+        logging.error(f"最終目標値の保存でエラー: {str(e)}")
+        return False
+
+def get_target_values_from_storage(driver):
+    """
+    HTMLの属性から更新された目標値を取得し、対応するテキストファイルに保存します。
+    """
+    try:
+        # 週間目標値の取得と保存
+        week_a = driver.execute_script("return localStorage.getItem('week_a_target')")
+        week_k = driver.execute_script("return localStorage.getItem('week_k_target')")
+        if week_a and week_k:
+            save_target_values(int(week_a), int(week_k))
+
+        # 月間目標値の取得と保存
+        month_a = driver.execute_script("return localStorage.getItem('month_a_target')")
+        month_k = driver.execute_script("return localStorage.getItem('month_k_target')")
+        if month_a and month_k:
+            save_month_target_values(int(month_a), int(month_k))
+
+        # 最終目標値の取得と保存
+        last_target1 = driver.execute_script("return localStorage.getItem('last_target1')")
+        last_target3 = driver.execute_script("return localStorage.getItem('last_target3')")
+        last_target5 = driver.execute_script("return localStorage.getItem('last_target5')")
+        if last_target1 and last_target3 and last_target5:
+            save_last_target_values(int(last_target1), int(last_target3), int(last_target5))
+
+        return True
+    except Exception as e:
+        logging.error(f"目標値の取得でエラー: {str(e)}")
+        return False
 
 def create_html_content(a_total, k_total, is_week=True, is_last=False):
     """
@@ -271,6 +339,55 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
         title = "最終目標！"
     else:
         title = f"{current_month}月目標！"
+    
+    # モーダルコンテンツの設定
+    if is_week:
+        modal_content = f"""
+        <div class="modal-content">
+            <h2>週間目標値の変更</h2>
+            <div class="input-group">
+                <label>A目標数</label>
+                <input type="number" id="week_a_target" value="{a_target}">
+            </div>
+            <div class="input-group">
+                <label>K目標数</label>
+                <input type="number" id="week_k_target" value="{k_target}">
+            </div>
+            <button onclick="saveWeekTargets()">変更</button>
+        </div>"""
+    elif is_last:
+        target1, target3, target5 = read_last_target_values()
+        modal_content = f"""
+        <div class="modal-content">
+            <h2>最終目標値の変更</h2>
+            <div class="input-group">
+                <label>最低目標</label>
+                <input type="number" id="last_target1" value="{target1}">
+            </div>
+            <div class="input-group">
+                <label>第二目標</label>
+                <input type="number" id="last_target3" value="{target3}">
+            </div>
+            <div class="input-group">
+                <label>最高目標</label>
+                <input type="number" id="last_target5" value="{target5}">
+            </div>
+            <button onclick="saveLastTargets()">変更</button>
+        </div>"""
+    else:
+        modal_content = f"""
+        <div class="modal-content">
+            <h2>月間目標値の変更</h2>
+            <div class="input-group">
+                <label>A目標数</label>
+                <input type="number" id="month_a_target" value="{a_target}">
+            </div>
+            <div class="input-group">
+                <label>K目標数</label>
+                <input type="number" id="month_k_target" value="{k_target}">
+            </div>
+            <button onclick="saveMonthTargets()">変更</button>
+        </div>"""
     
     # 右下セクションの内容を条件分岐
     if is_last:
@@ -409,9 +526,75 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
     .timestamp {{
       display: none;
     }}
+    
+    /* モーダル関連のスタイル */
+    .target-change-btn {{
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      z-index: 1000;
+    }}
+    .target-change-btn:hover {{
+      background-color: #2980b9;
+    }}
+    .modal {{
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 1001;
+    }}
+    .modal-content {{
+      position: relative;
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 5px;
+    }}
+    .input-group {{
+      margin: 15px 0;
+    }}
+    .input-group label {{
+      display: block;
+      margin-bottom: 5px;
+    }}
+    .input-group input {{
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }}
+    .modal-content button {{
+      width: 100%;
+      padding: 10px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }}
+    .modal-content button:hover {{
+      background-color: #2980b9;
+    }}
   </style>
 </head>
 <body>
+  <button class="target-change-btn" onclick="showModal()">目標数変更</button>
+  <div id="targetModal" class="modal">
+    {modal_content}
+  </div>
   <h1>{title}</h1>
   <div class="container">
     <div class="section">
@@ -428,6 +611,44 @@ def create_html_content(a_total, k_total, is_week=True, is_last=False):
     </div>
   </div>
   <div class="timestamp">{timestamp}</div>
+  <script>
+    function showModal() {{
+      document.getElementById('targetModal').style.display = 'block';
+    }}
+    
+    function saveWeekTargets() {{
+      const aTarget = document.getElementById('week_a_target').value;
+      const kTarget = document.getElementById('week_k_target').value;
+      localStorage.setItem('week_a_target', aTarget);
+      localStorage.setItem('week_k_target', kTarget);
+      location.reload();
+    }}
+    
+    function saveMonthTargets() {{
+      const aTarget = document.getElementById('month_a_target').value;
+      const kTarget = document.getElementById('month_k_target').value;
+      localStorage.setItem('month_a_target', aTarget);
+      localStorage.setItem('month_k_target', kTarget);
+      location.reload();
+    }}
+    
+    function saveLastTargets() {{
+      const target1 = document.getElementById('last_target1').value;
+      const target3 = document.getElementById('last_target3').value;
+      const target5 = document.getElementById('last_target5').value;
+      localStorage.setItem('last_target1', target1);
+      localStorage.setItem('last_target3', target3);
+      localStorage.setItem('last_target5', target5);
+      location.reload();
+    }}
+    
+    window.onclick = function(event) {{
+      const modal = document.getElementById('targetModal');
+      if (event.target == modal) {{
+        modal.style.display = 'none';
+      }}
+    }}
+  </script>
 </body>
 </html>"""
 
@@ -853,39 +1074,42 @@ if __name__ == "__main__":
                 current_handle = display_driver.current_window_handle
                 current_url = display_driver.current_url
                 
-                # 現在のタブだけを更新（キャッシュを無効化するパラメータを追加）
+                # 現在のタブから目標値を更新
+                get_target_values_from_storage(display_driver)
+                
+                # 目標値を再読み込み（全てのタブでの更新を反映）
+                week_a_target, week_k_target = read_target_values()
+                month_a_target, month_k_target = read_month_target_values()
+                last_target1, last_target3, last_target5 = read_last_target_values()
+                
+                # HTML更新前の待機
+                time.sleep(1)
+                
+                # タイムスタンプを追加してキャッシュを回避
+                timestamp = int(time.time())
+                
+                # HTMLファイルを更新（最新の目標値を反映）
+                with open(week_filename, "w", encoding="utf-8") as file:
+                    html_content = create_html_content(week_a_total, week_k_total, is_week=True)
+                    file.write(html_content)
+                with open(month_filename, "w", encoding="utf-8") as file:
+                    html_content = create_html_content(month_a_total, month_k_total, is_week=False)
+                    file.write(html_content)
+                with open(last_filename, "w", encoding="utf-8") as file:
+                    html_content = create_html_content(last_a_total, last_k_total, is_week=False, is_last=True)
+                    file.write(html_content)
+                time.sleep(2)
+                
+                # 現在のタブのURLに基づいて、適切なHTMLファイルを更新
                 if "week_result.html" in current_url:
-                    # 週間データを表示
-                    ak_total = week_a_total + week_k_total
-                    remainder = 890 - ak_total
-                    
-                    # 週間HTMLをリロード（キャッシュ回避のためにタイムスタンプパラメータを追加）
                     display_driver.get(f"{week_path}?t={timestamp}")
-                    
-                    print(f"更新完了 [週間]: A残込 = {week_a_total}, K残込 = {week_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
                 elif "month_result.html" in current_url:
-                    # 月間データを表示
-                    ak_total = month_a_total + month_k_total
-                    remainder = 890 - ak_total
-                    
-                    # 月間HTMLをリロード（キャッシュ回避のためにタイムスタンプパラメータを追加）
                     display_driver.get(f"{month_path}?t={timestamp}")
-                    
-                    print(f"更新完了 [月間]: A残込 = {month_a_total}, K残込 = {month_k_total}, AK残込 = {ak_total}, 890まで {remainder}件（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
                 elif "last_result.html" in current_url:
-                    # 最終目標データを表示
-                    ak_total = last_a_total + last_k_total
-                    
-                    # 最終目標HTMLをリロード（キャッシュ回避のためにタイムスタンプパラメータを追加）
                     display_driver.get(f"{last_path}?t={timestamp}")
-                    
-                    # 最終目標値の読み込み
-                    target1, target3, target5 = read_last_target_values()
-                    target2 = target1 - ak_total
-                    target4 = target3 - ak_total
-                    
-                    print(f"更新完了 [最終]: A残込 = {last_a_total}, K残込 = {last_k_total}, AK残込 = {ak_total}（{time.strftime('%Y-%m-%d %H:%M:%S')}）")
-                    print(f"目標1: {target1}件まで残り{target2}件, 目標2: {target3}件まで残り{target4}件, 目標3: {target5}件まで残り{target5 - ak_total}件")
+                else:
+                    # URLが不明な場合は、現在のタブのURLを維持
+                    display_driver.get(current_url)
                 
                 # 週間・月間・最終目標のデータを常に表示
                 week_ak_total = week_a_total + week_k_total

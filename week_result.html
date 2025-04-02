@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>10w目標！</title>
+  <title>14w目標！</title>
   <style>
     html, body {
       margin: 0;
@@ -75,32 +75,148 @@
     .timestamp {
       display: none;
     }
+    
+    /* モーダル関連のスタイル */
+    .target-change-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      z-index: 1000;
+    }
+    .target-change-btn:hover {
+      background-color: #2980b9;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 1001;
+    }
+    .modal-content {
+      position: relative;
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 5px;
+    }
+    .input-group {
+      margin: 15px 0;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .modal-content button {
+      width: 100%;
+      padding: 10px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .modal-content button:hover {
+      background-color: #2980b9;
+    }
   </style>
 </head>
 <body>
-  <h1>10w目標！</h1>
+  <button class="target-change-btn" onclick="showModal()">目標数変更</button>
+  <div id="targetModal" class="modal">
+    
+        <div class="modal-content">
+            <h2>週間目標値の変更</h2>
+            <div class="input-group">
+                <label>A目標数</label>
+                <input type="number" id="week_a_target" value="216">
+            </div>
+            <div class="input-group">
+                <label>K目標数</label>
+                <input type="number" id="week_k_target" value="22">
+            </div>
+            <button onclick="saveWeekTargets()">変更</button>
+        </div>
+  </div>
+  <h1>14w目標！</h1>
   <div class="container">
     <div class="section">
-      <p>A残込　<span class="important">169</span> 件</p>
+      <p>A残込　<span class="important">139</span> 件</p>
     </div>
     <div class="section">
-      <p>K残込　<span class="important">23</span> 件</p>
+      <p>K残込　<span class="important">14</span> 件</p>
     </div>
     <div class="section">
-      <p>AK残込　<span class="important">192</span> 件</p>
+      <p>AK残込　<span class="important">153</span> 件</p>
     </div>
     <div class="section small">
       
         <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 1vh; box-sizing: border-box;">
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 9vh; white-space: nowrap;">216件まで: <span class="important" style="font-size: 10vh;">47件</span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">216件まで: <span class="important" style="font-size: 8vh;">77件</span></div>
             </div>
             <div style="text-align: center; margin: 0.5vh 0;">
-                <div style="font-size: 9vh; white-space: nowrap;">22件まで: <span class="important" style="font-size: 10vh;"><span style="white-space: nowrap;">★1件<img src="achievement.png" style="width:8vh; height:8vh; vertical-align: middle;"></span></span></div>
+                <div style="font-size: 7vh; white-space: nowrap;">22件まで: <span class="important" style="font-size: 8vh;">8件</span></div>
             </div>
         </div>
     </div>
   </div>
-  <div class="timestamp">1741436753</div>
+  <div class="timestamp">1743560168</div>
+  <script>
+    function showModal() {
+      document.getElementById('targetModal').style.display = 'block';
+    }
+    
+    function saveWeekTargets() {
+      const aTarget = document.getElementById('week_a_target').value;
+      const kTarget = document.getElementById('week_k_target').value;
+      localStorage.setItem('week_a_target', aTarget);
+      localStorage.setItem('week_k_target', kTarget);
+      location.reload();
+    }
+    
+    function saveMonthTargets() {
+      const aTarget = document.getElementById('month_a_target').value;
+      const kTarget = document.getElementById('month_k_target').value;
+      localStorage.setItem('month_a_target', aTarget);
+      localStorage.setItem('month_k_target', kTarget);
+      location.reload();
+    }
+    
+    function saveLastTargets() {
+      const target1 = document.getElementById('last_target1').value;
+      const target3 = document.getElementById('last_target3').value;
+      const target5 = document.getElementById('last_target5').value;
+      localStorage.setItem('last_target1', target1);
+      localStorage.setItem('last_target3', target3);
+      localStorage.setItem('last_target5', target5);
+      location.reload();
+    }
+    
+    window.onclick = function(event) {
+      const modal = document.getElementById('targetModal');
+      if (event.target == modal) {
+        modal.style.display = 'none';
+      }
+    }
+  </script>
 </body>
 </html>
